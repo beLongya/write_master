@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>个人字迹仿写照片生成器</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>个人字迹仿写照片生成器</h1>
+      <p>OCR 识别、个人字库、缺字补录、文档转手写，一起收进一个本地工作台。</p>
+    </div>
+    <div class="privacy-note">照片会发送到你配置的百度 OCR 服务识别；字库保存在当前浏览器。请仅用于个人创意、手账、便签和练习展示。</div>
+  </header>
+
+  <main class="workspace">
+    <section class="panel module-ocr" aria-labelledby="ocr-title">
+      <div class="section-title">
+        <span>1</span>
+        <h2 id="ocr-title">OCR 识别</h2>
+      </div>
+
+      <label class="file-drop">
+        <input id="sampleInput" type="file" accept="image/png,image/jpeg">
+        <strong>上传整张手写照片</strong>
+        <small>建议白纸深色字、光线均匀、文字横向排列</small>
+      </label>
+
+      <div class="sample-stage">
+        <canvas id="sampleCanvas" width="900" height="540"></canvas>
+        <div id="emptySample" class="empty-state">上传图片后会显示 OCR 文字块、切字候选和手动框选区域</div>
+      </div>
+
+      <div class="toolbar">
+        <button id="ocrBtn" type="button">自动识别整张照片</button>
+        <button id="buildCandidatesBtn" type="button" class="ghost">生成字库候选</button>
+        <button id="acceptCandidatesBtn" type="button" class="ghost">确认候选入库</button>
+      </div>
+
+      <label class="full-width">
+        OCR 结果校对
+        <textarea id="ocrText" rows="5" placeholder="识别后的文字会显示在这里。请修正错字，再生成字库候选。"></textarea>
+      </label>
+
+      <div id="recognitionStatus" class="status">未识别。请先上传照片，然后点击“自动识别整张照片”。</div>
+
+      <div class="subhead">
+        <strong>识别文字块</strong>
+        <span id="blockCount">0 个</span>
+      </div>
+      <div id="blockList" class="block-list"></div>
+
+      <div class="subhead">
+        <strong>字库候选</strong>
+        <button id="clearCandidatesBtn" type="button" class="ghost small">清空候选</button>
+      </div>
+      <div id="candidateGrid" class="glyph-grid"></div>
+
+      <details class="manual-box">
+        <summary>手动修正：框选单字加入当前风格字库</summary>
+        <div class="toolbar">
+          <label>
+            绑定字符
+            <input id="glyphChar" type="text" maxlength="2" placeholder="例：你">
+          </label>
+          <button id="addGlyphBtn" type="button">加入字库</button>
+          <button id="clearSelectionBtn" type="button" class="ghost">清除框选</button>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel module-library" aria-labelledby="library-title">
+      <div class="section-title">
+        <span>2</span>
+        <h2 id="library-title">字库管理</h2>
+      </div>
+
+      <div class="control-grid">
+        <label>
+          当前风格
+          <select id="styleSelect"></select>
+        </label>
+        <label>
+          新风格名称
+          <input id="styleName" type="text" placeholder="例：速写版">
+        </label>
+      </div>
+      <div class="toolbar">
+        <button id="addStyleBtn" type="button">新建风格</button>
+        <button id="deleteStyleBtn" type="button" class="danger">删除当前风格</button>
+        <button id="clearLibraryBtn" type="button" class="danger">清空当前字库</button>
+      </div>
+
+      <div class="stats-grid">
+        <div>
+          <strong id="glyphCount">0</strong>
+          <span>已收录字符</span>
+        </div>
+        <div>
+          <strong id="sampleCount">0</strong>
+          <span>字样样本</span>
+        </div>
+        <div>
+          <strong id="coverageRate">0%</strong>
+          <span>常用字覆盖</span>
+        </div>
+      </div>
+
+      <div id="missingChars" class="missing-chars"></div>
+
+      <div class="subhead">
+        <strong>缺字补录任务</strong>
+        <button id="copyPracticeBtn" type="button" class="ghost small">复制补写内容</button>
+      </div>
+      <textarea id="practiceText" rows="4" readonly></textarea>
+
+      <div class="subhead">
+        <strong>当前风格字库</strong>
+      </div>
+      <div id="libraryGrid" class="glyph-grid"></div>
+    </section>
+
+    <section class="panel module-generate" aria-labelledby="generate-title">
+      <div class="section-title">
+        <span>3</span>
+        <h2 id="generate-title">手写生成</h2>
+      </div>
+
+      <label class="full-width">
+        输入文本
+        <textarea id="textInput" rows="8" placeholder="输入要生成的文字。缺字会临时使用默认手写字体。">今天也要认真生活。
+这是我的手写风格便签。</textarea>
+      </label>
+
+      <div class="control-grid">
+        <label>
+          纸张模板
+          <select id="paperType">
+            <option value="essay">作文本</option>
+            <option value="lined">横线纸</option>
+            <option value="grid">方格纸</option>
+            <option value="a4">A4 白纸</option>
+            <option value="custom">自定义纸张</option>
+          </select>
+        </label>
+        <label>
+          自定义纸张
+          <input id="customPaperInput" type="file" accept="image/png,image/jpeg">
+        </label>
+        <label>
+          笔迹效果
+          <select id="penType">
+            <option value="blackGel">黑色中性笔</option>
+            <option value="blueBall">蓝色圆珠笔</option>
+            <option value="fountain">钢笔风格</option>
+          </select>
+        </label>
+        <label>
+          字号 <output id="fontSizeOut">26</output>
+          <input id="fontSize" type="range" min="16" max="44" value="26">
+        </label>
+        <label>
+          行距 <output id="lineHeightOut">46</output>
+          <input id="lineHeight" type="range" min="30" max="76" value="46">
+        </label>
+        <label>
+          字间距 <output id="letterGapOut">4</output>
+          <input id="letterGap" type="range" min="-4" max="18" value="4">
+        </label>
+        <label>
+          自然抖动 <output id="jitterOut">6</output>
+          <input id="jitter" type="range" min="0" max="14" value="6">
+        </label>
+        <label>
+          拍照真实感 <output id="photoRealOut">7</output>
+          <input id="photoReal" type="range" min="0" max="12" value="7">
+        </label>
+        <label>
+          纸张角度 <output id="tiltOut">2</output>
+          <input id="tilt" type="range" min="-8" max="8" value="2">
+        </label>
+      </div>
+
+      <div class="toolbar">
+        <button id="renderBtn" type="button">生成</button>
+        <button id="randomizeBtn" type="button" class="ghost">随机微调</button>
+        <button id="regionModeBtn" type="button" class="ghost">框选书写区域</button>
+        <button id="resetRegionBtn" type="button" class="ghost">重置区域</button>
+        <button id="downloadPngBtn" type="button">下载 PNG</button>
+        <button id="downloadJpgBtn" type="button" class="ghost">下载 JPG</button>
+      </div>
+      <div id="regionStatus" class="status">默认写满纸面。点击“框选书写区域”后，可在预览纸张上拖拽限定书写范围。</div>
+
+      <div class="preview-wrap">
+        <canvas id="previewCanvas" width="1120" height="820"></canvas>
+      </div>
+
+      <div class="section-title compact">
+        <span>4</span>
+        <h2>文件转换</h2>
+      </div>
+      <label class="file-drop compact-drop">
+        <input id="documentInput" type="file" accept=".docx,.pdf" multiple>
+        <strong>上传 Word / PDF</strong>
+        <small>第一版提取纯文本，再按页生成手写图片</small>
+      </label>
+      <div class="toolbar">
+        <button id="extractDocsBtn" type="button">提取文档文本</button>
+        <button id="downloadBatchBtn" type="button" class="ghost">批量下载手写图片</button>
+      </div>
+      <div id="documentStatus" class="status">未上传文档。</div>
+      <div id="documentTasks" class="document-list"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
